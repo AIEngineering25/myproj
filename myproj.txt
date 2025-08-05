@@ -1,0 +1,580 @@
+package com.setup;
+
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import io.github.bonigarcia.wdm.WebDriverManager;
+
+public class BaseSteps {
+    protected static WebDriver driver;
+
+    @BeforeClass
+    public static void setUp() {
+        driver = initializeDriver();
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        closeDriver();
+    }
+
+    public static WebDriver initializeDriver() {
+        String browserName = System.getProperty("browser", "chrome");
+
+        switch (browserName.toLowerCase()) {
+            case "chrome":
+                WebDriverManager.chromedriver().setup();
+                driver = new ChromeDriver();
+                break;
+            case "firefox":
+                WebDriverManager.firefoxdriver().setup();
+                driver = new FirefoxDriver();
+                break;
+            case "edge":
+                WebDriverManager.edgedriver().setup();
+                driver = new EdgeDriver();
+                break;
+            default:
+                throw new IllegalArgumentException("Browser not supported: " + browserName);
+        }
+
+        driver.manage().window().maximize();
+        driver.manage().deleteAllCookies();
+        return driver;
+    }
+
+    public static void closeDriver() {
+        if (driver != null) {
+            driver.quit();
+            driver = null;
+        }
+    }
+
+    public static WebDriver getDriver() {
+        return driver;
+    }
+}
+
+package com.pages;
+
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.interactions.Actions;
+import com.setup.BaseSteps;
+import java.time.Duration;
+
+public class BasePage extends BaseSteps {
+    protected WebDriver driver;
+    protected WebDriverWait wait;
+    protected Actions actions;
+    protected JavascriptExecutor jsExecutor;
+
+    public BasePage() {
+        this.driver = getDriver();
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.actions = new Actions(driver);
+        this.jsExecutor = (JavascriptExecutor) driver;
+        PageFactory.initElements(driver, this);
+    }
+
+    protected void waitForElementToBeVisible(WebElement element) {
+        wait.until(ExpectedConditions.visibilityOf(element));
+    }
+
+    protected void waitForElementToBeClickable(WebElement element) {
+        wait.until(ExpectedConditions.elementToBeClickable(element));
+    }
+
+    protected void clickElement(WebElement element) {
+        waitForElementToBeClickable(element);
+        element.click();
+    }
+
+    protected void sendKeysToElement(WebElement element, String text) {
+        waitForElementToBeVisible(element);
+        element.clear();
+        element.sendKeys(text);
+    }
+
+    protected String getElementText(WebElement element) {
+        waitForElementToBeVisible(element);
+        return element.getText();
+    }
+
+    protected boolean isElementDisplayed(WebElement element) {
+        try {
+            return element.isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    protected void scrollToElement(WebElement element) {
+        jsExecutor.executeScript("arguments[0].scrollIntoView(true);", element);
+    }
+
+    protected void navigateToUrl(String url) {
+        driver.get(url);
+    }
+
+    protected String getCurrentUrl() {
+        return driver.getCurrentUrl();
+    }
+
+    protected String getPageTitle() {
+        return driver.getTitle();
+    }
+}
+
+
+package com.pages;
+
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.By;
+import org.testng.Assert;
+import java.util.List;
+import java.util.ArrayList;
+
+public class BuyPage extends BasePage {
+    
+    // Page Elements using Page Factory
+    @FindBy(xpath = "//a[contains(text(),'Buy') or contains(@href,'buy')]")
+    private WebElement buyMenuLink;
+    
+    @FindBy(id = "keyword")
+    private WebElement searchLocationField;
+    
+    @FindBy(xpath = "//button[contains(text(),'Search') or @type='submit']")
+    private WebElement searchButton;
+    
+    @FindBy(xpath = "//div[@class='search-results'] | //div[contains(@class,'property-card')]")
+    private List<WebElement> searchResults;
+    
+    @FindBy(xpath = "//div[contains(text(),'No results found') or contains(text(),'No properties found')]")
+    private WebElement noResultsMessage;
+    
+    @FindBy(xpath = "//select[@id='budget'] | //div[contains(@class,'budget-filter')]")
+    private WebElement budgetFilter;
+    
+    @FindBy(xpath = "//select[@id='bhk'] | //div[contains(@class,'bhk-filter')]")
+    private WebElement bhkFilter;
+    
+    @FindBy(xpath = "//select[@id='property-type'] | //div[contains(@class,'property-type-filter')]")
+    private WebElement propertyTypeFilter;
+    
+    @FindBy(xpath = "//select[contains(@class,'sort')] | //div[contains(@class,'sort-dropdown')]")
+    private WebElement sortDropdown;
+    
+    @FindBy(xpath = "//div[contains(@class,'property-price')]")
+    private List<WebElement> propertyPrices;
+    
+    @FindBy(xpath = "//div[contains(@class,'amenities')] | //ul[contains(@class,'amenities')]")
+    private WebElement amenitiesSection;
+    
+    @FindBy(xpath = "//a[contains(@class,'next')] | //button[contains(text(),'Next')]")
+    private WebElement nextPageButton;
+    
+    @FindBy(xpath = "//a[contains(@class,'previous')] | //button[contains(text(),'Previous')]")
+    private WebElement previousPageButton;
+    
+    @FindBy(xpath = "//div[contains(@class,'pagination')] | //ul[contains(@class,'pagination')]")
+    private WebElement paginationSection;
+    
+    @FindBy(xpath = "//span[contains(@class,'page-number')] | //a[contains(@class,'page-link')]")
+    private List<WebElement> pageNumbers;
+
+    // Test Methods for MagicBricks Buy Page Testing
+    
+    /**
+     * TC_BUY_001: Verify Buy page navigation and elements
+     */
+    public boolean verifyBuyPageNavigationAndElements() {
+        try {
+            // Navigate to MagicBricks homepage
+            navigateToUrl("https://www.magicbricks.com");
+            
+            // Click on Buy menu/link
+            clickElement(buyMenuLink);
+            
+            // Verify page title contains "Buy" or "Sale"
+            String pageTitle = getPageTitle();
+            boolean titleContainsBuy = pageTitle.toLowerCase().contains("buy") || 
+                                     pageTitle.toLowerCase().contains("sale");
+            
+            // Verify URL contains "buy" or "sale"
+            String currentUrl = getCurrentUrl();
+            boolean urlContainsBuy = currentUrl.toLowerCase().contains("buy") || 
+                                   currentUrl.toLowerCase().contains("sale");
+            
+            // Verify search elements are displayed
+            boolean searchFieldDisplayed = isElementDisplayed(searchLocationField);
+            boolean searchButtonDisplayed = isElementDisplayed(searchButton);
+            
+            // Verify filter options are visible
+            boolean filtersVisible = isElementDisplayed(budgetFilter) || 
+                                   isElementDisplayed(bhkFilter);
+            
+            return titleContainsBuy && urlContainsBuy && searchFieldDisplayed && 
+                   searchButtonDisplayed && filtersVisible;
+                   
+        } catch (Exception e) {
+            System.out.println("Error in verifyBuyPageNavigationAndElements: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * TC_BUY_002: Search properties by valid location
+     */
+    public boolean searchPropertiesByValidLocation(String location) {
+        try {
+            // Enter location in search field
+            sendKeysToElement(searchLocationField, location);
+            
+            // Click search button
+            clickElement(searchButton);
+            
+            // Wait for results to load
+            Thread.sleep(3000);
+            
+            // Verify search results are displayed
+            boolean resultsDisplayed = !searchResults.isEmpty();
+            
+            // Verify results contain properties from searched location
+            boolean locationMatched = false;
+            for (WebElement result : searchResults) {
+                String resultText = getElementText(result);
+                if (resultText.toLowerCase().contains(location.toLowerCase())) {
+                    locationMatched = true;
+                    break;
+                }
+            }
+            
+            return resultsDisplayed && locationMatched;
+            
+        } catch (Exception e) {
+            System.out.println("Error in searchPropertiesByValidLocation: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * TC_BUY_003: Search properties by invalid location
+     */
+    public boolean searchPropertiesByInvalidLocation(String invalidLocation) {
+        try {
+            // Enter invalid location in search field
+            sendKeysToElement(searchLocationField, invalidLocation);
+            
+            // Click search button
+            clickElement(searchButton);
+            
+            // Wait for results to load
+            Thread.sleep(3000);
+            
+            // Verify "No results found" message is displayed
+            boolean noResultsDisplayed = isElementDisplayed(noResultsMessage);
+            
+            // Check if results are empty or no results message is shown
+            boolean emptyResults = searchResults.isEmpty();
+            
+            return noResultsDisplayed || emptyResults;
+            
+        } catch (Exception e) {
+            System.out.println("Error in searchPropertiesByInvalidLocation: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * TC_BUY_004: Multiple filters combination
+     */
+    public boolean applyMultipleFilters(String location, String budget, String bhk, String propertyType) {
+        try {
+            // Search for properties first
+            searchPropertiesByValidLocation(location);
+            
+            // Apply budget filter
+            if (isElementDisplayed(budgetFilter)) {
+                Select budgetSelect = new Select(budgetFilter);
+                budgetSelect.selectByVisibleText(budget);
+            }
+            
+            // Apply BHK filter
+            if (isElementDisplayed(bhkFilter)) {
+                Select bhkSelect = new Select(bhkFilter);
+                bhkSelect.selectByVisibleText(bhk);
+            }
+            
+            // Apply property type filter
+            if (isElementDisplayed(propertyTypeFilter)) {
+                Select propertySelect = new Select(propertyTypeFilter);
+                propertySelect.selectByVisibleText(propertyType);
+            }
+            
+            // Wait for filtered results
+            Thread.sleep(3000);
+            
+            // Verify results match criteria (basic verification)
+            return !searchResults.isEmpty();
+            
+        } catch (Exception e) {
+            System.out.println("Error in applyMultipleFilters: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * TC_BUY_012: Sort properties by price (Low to High)
+     */
+    public boolean sortPropertiesByPriceLowToHigh() {
+        try {
+            // Select "Price: Low to High" from sort dropdown
+            if (isElementDisplayed(sortDropdown)) {
+                Select sortSelect = new Select(sortDropdown);
+                sortSelect.selectByVisibleText("Price: Low to High");
+            }
+            
+            // Wait for sorting to apply
+            Thread.sleep(3000);
+            
+            // Get all property prices and verify ascending order
+            List<Integer> prices = new ArrayList<>();
+            for (WebElement priceElement : propertyPrices) {
+                String priceText = getElementText(priceElement);
+                // Extract numeric value from price text
+                String numericPrice = priceText.replaceAll("[^0-9]", "");
+                if (!numericPrice.isEmpty()) {
+                    prices.add(Integer.parseInt(numericPrice));
+                }
+            }
+            
+            // Verify ascending order
+            for (int i = 0; i < prices.size() - 1; i++) {
+                if (prices.get(i) > prices.get(i + 1)) {
+                    return false;
+                }
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.out.println("Error in sortPropertiesByPriceLowToHigh: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * TC_BUY_018: Property amenities display
+     */
+    public boolean verifyPropertyAmenitiesDisplay() {
+        try {
+            // Click on first property to open details
+            if (!searchResults.isEmpty()) {
+                clickElement(searchResults.get(0));
+                
+                // Wait for property details page to load
+                Thread.sleep(3000);
+                
+                // Verify amenities section is displayed
+                boolean amenitiesDisplayed = isElementDisplayed(amenitiesSection);
+                
+                // Verify amenities are properly listed
+                if (amenitiesDisplayed) {
+                    String amenitiesText = getElementText(amenitiesSection);
+                    return !amenitiesText.isEmpty();
+                }
+            }
+            
+            return false;
+            
+        } catch (Exception e) {
+            System.out.println("Error in verifyPropertyAmenitiesDisplay: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * TC_BUY_026: Navigate through search result pages
+     */
+    public boolean navigateThroughSearchResultPages() {
+        try {
+            // Verify pagination section is displayed
+            boolean paginationDisplayed = isElementDisplayed(paginationSection);
+            
+            if (paginationDisplayed) {
+                // Navigate to page 2
+                if (isElementDisplayed(nextPageButton)) {
+                    clickElement(nextPageButton);
+                    Thread.sleep(2000);
+                    
+                    // Verify different properties are shown
+                    boolean page2HasResults = !searchResults.isEmpty();
+                    
+                    // Navigate back using Previous button
+                    if (isElementDisplayed(previousPageButton)) {
+                        clickElement(previousPageButton);
+                        Thread.sleep(2000);
+                    }
+                    
+                    // Verify page numbers are displayed
+                    boolean pageNumbersDisplayed = !pageNumbers.isEmpty();
+                    
+                    return page2HasResults && pageNumbersDisplayed;
+                }
+            }
+            
+            return paginationDisplayed;
+            
+        } catch (Exception e) {
+            System.out.println("Error in navigateThroughSearchResultPages: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    // Utility method to get current page number
+    public int getCurrentPageNumber() {
+        try {
+            for (WebElement pageNumber : pageNumbers) {
+                if (pageNumber.getAttribute("class").contains("active") || 
+                    pageNumber.getAttribute("class").contains("current")) {
+                    return Integer.parseInt(getElementText(pageNumber));
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error getting current page number: " + e.getMessage());
+        }
+        return 1;
+    }
+    
+    // Method to navigate to homepage
+    public void navigateToHomePage() {
+        navigateToUrl("https://www.magicbricks.com");
+    }
+}
+
+package com.tests;
+
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
+import org.testng.Assert;
+import com.pages.BuyPage;
+
+public class MainTest {
+    private BuyPage buyPage;
+    
+    @BeforeMethod
+    public void setUpTest() {
+        buyPage = new BuyPage();
+    }
+    
+    @Test(priority = 1, description = "TC_BUY_001: Verify Buy page navigation and elements")
+    public void testBuyPageNavigationAndElements() {
+        boolean result = buyPage.verifyBuyPageNavigationAndElements();
+        Assert.assertTrue(result, "Buy page navigation and elements verification failed");
+        System.out.println("TC_BUY_001: Buy page navigation and elements - PASSED");
+    }
+    
+    @Test(priority = 2, dataProvider = "validLocations", description = "TC_BUY_002: Search properties by valid location")
+    public void testSearchPropertiesByValidLocation(String location) {
+        buyPage.navigateToHomePage();
+        buyPage.verifyBuyPageNavigationAndElements();
+        
+        boolean result = buyPage.searchPropertiesByValidLocation(location);
+        Assert.assertTrue(result, "Search by valid location failed for: " + location);
+        System.out.println("TC_BUY_002: Search by valid location (" + location + ") - PASSED");
+    }
+    
+    @Test(priority = 3, dataProvider = "invalidLocations", description = "TC_BUY_003: Search properties by invalid location")
+    public void testSearchPropertiesByInvalidLocation(String invalidLocation) {
+        buyPage.navigateToHomePage();
+        buyPage.verifyBuyPageNavigationAndElements();
+        
+        boolean result = buyPage.searchPropertiesByInvalidLocation(invalidLocation);
+        Assert.assertTrue(result, "Search by invalid location test failed for: " + invalidLocation);
+        System.out.println("TC_BUY_003: Search by invalid location (" + invalidLocation + ") - PASSED");
+    }
+    
+    @Test(priority = 4, dataProvider = "filterCombinations", description = "TC_BUY_004: Multiple filters combination")
+    public void testMultipleFilters(String location, String budget, String bhk, String propertyType) {
+        buyPage.navigateToHomePage();
+        buyPage.verifyBuyPageNavigationAndElements();
+        
+        boolean result = buyPage.applyMultipleFilters(location, budget, bhk, propertyType);
+        Assert.assertTrue(result, "Multiple filters combination test failed");
+        System.out.println("TC_BUY_004: Multiple filters combination - PASSED");
+    }
+    
+    @Test(priority = 5, description = "TC_BUY_012: Sort properties by price (Low to High)")
+    public void testSortPropertiesByPriceLowToHigh() {
+        buyPage.navigateToHomePage();
+        buyPage.verifyBuyPageNavigationAndElements();
+        buyPage.searchPropertiesByValidLocation("Mumbai");
+        
+        boolean result = buyPage.sortPropertiesByPriceLowToHigh();
+        Assert.assertTrue(result, "Sort properties by price (Low to High) test failed");
+        System.out.println("TC_BUY_012: Sort properties by price (Low to High) - PASSED");
+    }
+    
+    @Test(priority = 6, description = "TC_BUY_018: Property amenities display")
+    public void testPropertyAmenitiesDisplay() {
+        buyPage.navigateToHomePage();
+        buyPage.verifyBuyPageNavigationAndElements();
+        buyPage.searchPropertiesByValidLocation("Delhi");
+        
+        boolean result = buyPage.verifyPropertyAmenitiesDisplay();
+        Assert.assertTrue(result, "Property amenities display test failed");
+        System.out.println("TC_BUY_018: Property amenities display - PASSED");
+    }
+    
+    @Test(priority = 7, description = "TC_BUY_026: Navigate through search result pages")
+    public void testNavigateThroughSearchResultPages() {
+        buyPage.navigateToHomePage();
+        buyPage.verifyBuyPageNavigationAndElements();
+        buyPage.searchPropertiesByValidLocation("Bangalore");
+        
+        boolean result = buyPage.navigateThroughSearchResultPages();
+        Assert.assertTrue(result, "Navigate through search result pages test failed");
+        System.out.println("TC_BUY_026: Navigate through search result pages - PASSED");
+    }
+    
+    // Data Providers
+    @DataProvider(name = "validLocations")
+    public Object[][] getValidLocations() {
+        return new Object[][] {
+            {"Mumbai"},
+            {"Delhi"},
+            {"Bangalore"},
+            {"Pune"},
+            {"Chennai"}
+        };
+    }
+    
+    @DataProvider(name = "invalidLocations")
+    public Object[][] getInvalidLocations() {
+        return new Object[][] {
+            {"InvalidCity123"},
+            {"XYZ Location"},
+            {"@@@@"}
+        };
+    }
+    
+    @DataProvider(name = "filterCombinations")
+    public Object[][] getFilterCombinations() {
+        return new Object[][] {
+            {"Mumbai", "50 Lakh - 1 Crore", "2 BHK", "Apartment"},
+            {"Delhi", "1 Crore - 2 Crore", "3 BHK", "Builder Floor"},
+            {"Bangalore", "30 Lakh - 50 Lakh", "1 BHK", "Apartment"}
+        };
+    }
+}
