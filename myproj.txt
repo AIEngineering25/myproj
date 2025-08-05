@@ -1,3 +1,56 @@
+public class BaseSteps {
+    protected static WebDriver driver;
+
+    @BeforeClass
+    public static void setUp() {
+        driver = initializeDriver();
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        closeDriver();
+    }
+
+    public static WebDriver initializeDriver() {
+        String browserName = System.getProperty("browser", "chrome");
+
+        switch (browserName.toLowerCase()) {
+            case "chrome":
+                WebDriverManager.chromedriver().setup();
+                driver = new ChromeDriver();
+                break;
+            case "firefox":
+                WebDriverManager.firefoxdriver().setup();
+                driver = new FirefoxDriver();
+                break;
+            case "edge":
+                WebDriverManager.edgedriver().setup();
+                driver = new EdgeDriver();
+                break;
+            default:
+                throw new IllegalArgumentException("Browser not supported: " + browserName);
+        }
+
+        driver.manage().window().maximize();
+        driver.manage().deleteAllCookies();
+        return driver;
+    }
+
+    public static void closeDriver() {
+        if (driver != null) {
+            driver.quit();
+            driver = null;
+        }
+    }
+
+    public static WebDriver getDriver() {
+        return driver;
+    }
+}
+
+
+---
+
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.PageFactory;
 
