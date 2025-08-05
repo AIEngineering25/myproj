@@ -27,8 +27,8 @@ public class ByPage extends BasePage {
     private WebElement readyToMoveLinkAlt;
     
     // New Page Elements for Search functionality
-    @FindBy(xpath = "//input[@placeholder='Search for locality, landmark, project or builder' or @placeholder='Enter City/Locality' or contains(@class,'search-input')]")
-    private WebElement searchLocationField;
+    @FindBy(xpath = "//input[@class='auto-suggest__input topCityLocality' or @placeholder='Enter City, Locality, Project']")
+private WebElement searchLocationField;
     
     @FindBy(xpath = "//button[contains(@class,'search-btn') or contains(text(),'Search') or @type='submit']")
     private WebElement searchButton;
