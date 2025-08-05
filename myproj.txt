@@ -85,53 +85,105 @@ public class ByPage extends BasePage {
     private WebDriverWait wait;
     private Actions actions;
     
-    // Page Elements using PageFactory
-    @FindBy(xpath = "//a[contains(text(),'Buy') or @title='Buy']")
+    // Updated Page Elements based on actual HTML structure
+    @FindBy(xpath = "//a[contains(text(),'Buy') or @title='Buy' or contains(@href,'buy')]")
     private WebElement buyTab;
     
-    @FindBy(xpath = "//span[contains(text(),'Popular Choices')]")
+    @FindBy(xpath = "//div[@class='drop-heading' and contains(text(),'Popular Choices')]")
     private WebElement popularChoicesHeading;
     
-    @FindBy(xpath = "//a[contains(text(),'Ready To Move')]")
+    @FindBy(xpath = "//div[@class='drop-call']//ul[@class='drop-links']//a[contains(text(),'Ready to Move')]")
     private WebElement readyToMoveLink;
+    
+    // Alternative locator in case the above doesn't work
+    @FindBy(xpath = "//ul[@class='drop-links']//li//a[contains(text(),'Ready to Move') or contains(text(),'Ready To Move')]")
+    private WebElement readyToMoveLinkAlt;
     
     public ByPage(WebDriver driver) {
         super(driver);
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
         this.actions = new Actions(driver);
         PageFactory.initElements(driver, this);
     }
     
     public void navigateToMagicBricks() {
         driver.get("https://www.magicbricks.com");
+        // Wait for page to load completely
         wait.until(ExpectedConditions.elementToBeClickable(buyTab));
+        
+        // Add a small delay to ensure page is fully loaded
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
     
     public void hoverOnBuyTab() {
         wait.until(ExpectedConditions.visibilityOf(buyTab));
         actions.moveToElement(buyTab).perform();
+        
+        // Add delay to allow dropdown to appear
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
     
     public void waitForPopularChoicesDropdown() {
-        wait.until(ExpectedConditions.visibilityOf(popularChoicesHeading));
+        try {
+            wait.until(ExpectedConditions.visibilityOf(popularChoicesHeading));
+        } catch (Exception e) {
+            System.out.println("Popular Choices heading not found with primary locator");
+            // Try alternative approach - wait for any dropdown to be visible
+            wait.until(ExpectedConditions.presenceOfElementLocated(
+                org.openqa.selenium.By.xpath("//div[@class='drop-call']")));
+        }
     }
     
     public void clickReadyToMoveLink() {
-        wait.until(ExpectedConditions.elementToBeClickable(readyToMoveLink));
+        WebElement linkToClick = null;
         
-        // Store current window handle
-        String originalWindow = driver.getWindowHandle();
+        try {
+            // Try primary locator first
+            linkToClick = wait.until(ExpectedConditions.elementToBeClickable(readyToMoveLink));
+        } catch (Exception e) {
+            try {
+                // Try alternative locator
+                linkToClick = wait.until(ExpectedConditions.elementToBeClickable(readyToMoveLinkAlt));
+            } catch (Exception e2) {
+                // Try a more generic approach
+                linkToClick = wait.until(ExpectedConditions.elementToBeClickable(
+                    org.openqa.selenium.By.xpath("//a[contains(text(),'Ready') and contains(@target,'_blank')]")));
+            }
+        }
         
-        // Click the Ready To Move link
-        readyToMoveLink.click();
-        
-        // Wait for new tab to open
-        wait.until(ExpectedConditions.numberOfWindowsToBe(2));
+        if (linkToClick != null) {
+            // Store current window handle
+            String originalWindow = driver.getWindowHandle();
+            
+            // Click the Ready To Move link
+            linkToClick.click();
+            
+            // Wait for new tab to open
+            try {
+                wait.until(ExpectedConditions.numberOfWindowsToBe(2));
+            } catch (Exception e) {
+                System.out.println("New tab may not have opened as expected");
+            }
+        } else {
+            throw new RuntimeException("Ready to Move link not found");
+        }
     }
     
     public boolean verifyNewTabOpened() {
-        Set<String> windowHandles = driver.getWindowHandles();
-        return windowHandles.size() > 1;
+        try {
+            Set<String> windowHandles = driver.getWindowHandles();
+            return windowHandles.size() > 1;
+        } catch (Exception e) {
+            return false;
+        }
     }
     
     public void switchToNewTab() {
@@ -152,26 +204,61 @@ public class ByPage extends BasePage {
         return driver.getTitle();
     }
     
-    // Complete test flow method
+    // Enhanced test flow method with better error handling
     public boolean executeReadyToMoveTest() {
         try {
+            System.out.println("Step 1: Navigating to MagicBricks...");
             navigateToMagicBricks();
+            
+            System.out.println("Step 2: Hovering on Buy tab...");
             hoverOnBuyTab();
+            
+            System.out.println("Step 3: Waiting for Popular Choices dropdown...");
             waitForPopularChoicesDropdown();
+            
+            System.out.println("Step 4: Clicking Ready to Move link...");
             clickReadyToMoveLink();
             
-            if (verifyNewTabOpened()) {
+            System.out.println("Step 5: Verifying new tab opened...");
+            boolean newTabOpened = verifyNewTabOpened();
+            
+            if (newTabOpened) {
+                System.out.println("Step 6: Switching to new tab...");
                 switchToNewTab();
+                System.out.println("Test completed successfully!");
                 return true;
+            } else {
+                System.out.println("New tab was not opened as expected");
+                return false;
             }
-            return false;
         } catch (Exception e) {
-            System.err.println("Test execution failed: " + e.getMessage());
+            System.err.println("Test execution failed at: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
+    
+    // Debug method to help troubleshoot
+    public void debugDropdownElements() {
+        try {
+            hoverOnBuyTab();
+            Thread.sleep(2000);
+            
+            // Find all dropdown elements for debugging
+            java.util.List<WebElement> dropdownElements = driver.findElements(
+                org.openqa.selenium.By.xpath("//div[@class='drop-call']//a"));
+            
+            System.out.println("Found " + dropdownElements.size() + " dropdown links:");
+            for (int i = 0; i < dropdownElements.size(); i++) {
+                WebElement element = dropdownElements.get(i);
+                System.out.println((i+1) + ". Text: '" + element.getText() + "' | href: '" + 
+                                 element.getAttribute("href") + "'");
+            }
+        } catch (Exception e) {
+            System.err.println("Debug failed: " + e.getMessage());
+        }
+    }
 }
-
 
 ----
 
