@@ -26,14 +26,17 @@ public class ByPage extends BasePage {
     @FindBy(xpath = "//ul[@class='drop-links']//li//a[contains(text(),'Ready to Move') or contains(text(),'Ready To Move')]")
     private WebElement readyToMoveLinkAlt;
     
-    // New Page Elements for Search functionality
+    // Updated Page Elements for Search functionality
     @FindBy(xpath = "//input[@class='auto-suggest__input topCityLocality' or @placeholder='Enter City, Locality, Project']")
-private WebElement searchLocationField;
+    private WebElement searchLocationField;
     
-    @FindBy(xpath = "//button[contains(@class,'search-btn') or contains(text(),'Search') or @type='submit']")
-    private WebElement searchButton;
+    @FindBy(xpath = "//div[@class='auto-suggest__drop-down__item']//span[@class='matches']")
+    private List<WebElement> locationDropdownOptions;
     
-    @FindBy(xpath = "//div[contains(@class,'search-results') or contains(@class,'property-card') or contains(@class,'srpWrap')]")
+    @FindBy(xpath = "//div[@class='filter__component__cta-done']")
+    private WebElement doneButton;
+    
+    @FindBy(xpath = "//div[contains(@class,'srpWrap') or contains(@class,'search-results') or contains(@class,'property')]")
     private List<WebElement> searchResults;
     
     @FindBy(xpath = "//div[contains(@class,'property-title') or contains(@class,'prop-title')]")
@@ -129,58 +132,67 @@ private WebElement searchLocationField;
         }
     }
     
-    // New methods for Search functionality
+    // Updated Search functionality methods
     public void enterLocationInSearchField(String location) {
         try {
             wait.until(ExpectedConditions.elementToBeClickable(searchLocationField));
             searchLocationField.clear();
             searchLocationField.sendKeys(location);
             
-            // Wait a moment for any autocomplete to appear
-            Thread.sleep(1000);
+            // Wait for dropdown to appear
+            Thread.sleep(1500);
             
             System.out.println("Entered location: " + location);
         } catch (Exception e) {
-            // Try alternative search field locators
-            try {
-                WebElement altSearchField = wait.until(ExpectedConditions.elementToBeClickable(
-                    org.openqa.selenium.By.xpath("//input[@type='text' and (contains(@placeholder,'city') or contains(@placeholder,'location'))]")));
-                altSearchField.clear();
-                altSearchField.sendKeys(location);
-                System.out.println("Entered location using alternative locator: " + location);
-            } catch (Exception e2) {
-                throw new RuntimeException("Search field not found: " + e2.getMessage());
-            }
+            throw new RuntimeException("Search field not found: " + e.getMessage());
         }
     }
     
-    public void clickSearchButton() {
+    public void selectLocationFromDropdown(String location) {
         try {
-            wait.until(ExpectedConditions.elementToBeClickable(searchButton));
-            searchButton.click();
-            System.out.println("Clicked search button");
+            // Wait for dropdown options to appear
+            wait.until(ExpectedConditions.visibilityOfElementLocated(
+                org.openqa.selenium.By.xpath("//div[@class='auto-suggest__drop-down__item']")));
+            
+            // Find and click the matching location from dropdown
+            for (WebElement option : locationDropdownOptions) {
+                if (option.getText().toLowerCase().contains(location.toLowerCase())) {
+                    option.click();
+                    System.out.println("Selected location from dropdown: " + option.getText());
+                    return;
+                }
+            }
+            
+            // If exact match not found, click the first option
+            if (!locationDropdownOptions.isEmpty()) {
+                locationDropdownOptions.get(0).click();
+                System.out.println("Selected first available option: " + locationDropdownOptions.get(0).getText());
+            } else {
+                throw new RuntimeException("No dropdown options found for: " + location);
+            }
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to select location from dropdown: " + e.getMessage());
+        }
+    }
+    
+    public void clickDoneButton() {
+        try {
+            wait.until(ExpectedConditions.elementToBeClickable(doneButton));
+            doneButton.click();
+            System.out.println("Clicked Done button");
             
             // Wait for search results to load
             Thread.sleep(3000);
         } catch (Exception e) {
-            // Try alternative search button locators
-            try {
-                WebElement altSearchBtn = wait.until(ExpectedConditions.elementToBeClickable(
-                    org.openqa.selenium.By.xpath("//button[@type='button' and contains(@class,'btn')]")));
-                altSearchBtn.click();
-                System.out.println("Clicked search button using alternative locator");
-                Thread.sleep(3000);
-            } catch (Exception e2) {
-                // Try submitting the form by pressing Enter
-                searchLocationField.sendKeys(org.openqa.selenium.Keys.ENTER);
-                System.out.println("Submitted search using Enter key");
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
-            }
+            throw new RuntimeException("Done button not found or not clickable: " + e.getMessage());
         }
+    }
+    
+    public void performLocationSearch(String location) {
+        enterLocationInSearchField(location);
+        selectLocationFromDropdown(location);
+        clickDoneButton();
     }
     
     public boolean verifySearchResultsDisplayed() {
@@ -280,13 +292,10 @@ private WebElement searchLocationField;
         try {
             System.out.println("=== Starting Location Search Test for: " + location + " ===");
             
-            System.out.println("Step 1: Entering location in search field...");
-            enterLocationInSearchField(location);
+            System.out.println("Step 1: Performing location search...");
+            performLocationSearch(location);
             
-            System.out.println("Step 2: Clicking search button...");
-            clickSearchButton();
-            
-            System.out.println("Step 3: Verifying search results are displayed...");
+            System.out.println("Step 2: Verifying search results are displayed...");
             boolean resultsDisplayed = verifySearchResultsDisplayed();
             
             if (!resultsDisplayed) {
@@ -294,7 +303,7 @@ private WebElement searchLocationField;
                 return false;
             }
             
-            System.out.println("Step 4: Verifying results contain searched location...");
+            System.out.println("Step 3: Verifying results contain searched location...");
             boolean locationMatched = verifyResultsContainSearchedLocation(location);
             
             if (locationMatched) {
@@ -312,7 +321,7 @@ private WebElement searchLocationField;
         }
     }
     
-    // Debug method to help troubleshoot
+    // Debug methods
     public void debugDropdownElements() {
         try {
             hoverOnBuyTab();
@@ -332,7 +341,6 @@ private WebElement searchLocationField;
         }
     }
     
-    // Debug method for search page
     public void debugSearchElements() {
         try {
             System.out.println("=== Debugging Search Elements ===");
@@ -347,22 +355,25 @@ private WebElement searchLocationField;
                                  "' | Class: '" + input.getAttribute("class") + "'");
             }
             
-            // Find all buttons
-            List<WebElement> buttons = driver.findElements(
-                org.openqa.selenium.By.xpath("//button"));
-            System.out.println("Found " + buttons.size() + " buttons:");
-            for (int i = 0; i < buttons.size(); i++) {
-                WebElement button = buttons.get(i);
-                System.out.println((i+1) + ". Text: '" + button.getText() + 
-                                 "' | Class: '" + button.getAttribute("class") + "'");
+            // Check for dropdown options
+            enterLocationInSearchField("Mumbai");
+            Thread.sleep(2000);
+            
+            List<WebElement> dropdownOptions = driver.findElements(
+                org.openqa.selenium.By.xpath("//div[@class='auto-suggest__drop-down__item']"));
+            System.out.println("Found " + dropdownOptions.size() + " dropdown options:");
+            for (int i = 0; i < dropdownOptions.size(); i++) {
+                WebElement option = dropdownOptions.get(i);
+                System.out.println((i+1) + ". Text: '" + option.getText() + "'");
             }
+            
         } catch (Exception e) {
             System.err.println("Search debug failed: " + e.getMessage());
         }
     }
 }
 
----
+-----
 
 
 import org.testng.annotations.Test;
@@ -423,6 +434,7 @@ public class MainTest {
         Assert.assertTrue(searchResult, "Search test failed for location: " + location);
         
         System.out.println("TC_BUY_002: Search properties test completed successfully for: " + location);
+        System.out.println("Location: " + location + " - Search Results Verified!");
         
         // Add small delay between location searches
         try {
@@ -430,6 +442,22 @@ public class MainTest {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+    
+    // Optional: Single location test for debugging
+    @Test(enabled = false)
+    public void testSingleLocationSearch() {
+        ByPage byPage = new ByPage(BaseSteps.getDriver());
+        
+        // First navigate to Ready to Move page
+        boolean navResult = byPage.executeReadyToMoveTest();
+        Assert.assertTrue(navResult, "Navigation to Ready to Move failed");
+        
+        // Then test search for one location
+        boolean searchResult = byPage.executeLocationSearchTest("Mumbai");
+        Assert.assertTrue(searchResult, "Search test failed for Mumbai");
+        
+        System.out.println("Single location search test completed!");
     }
     
     // Optional debug tests
