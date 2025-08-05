@@ -1,0 +1,451 @@
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import java.time.Duration;
+import java.util.Set;
+import java.util.List;
+
+public class ByPage extends BasePage {
+    private WebDriverWait wait;
+    private Actions actions;
+    
+    // Existing Page Elements for Buy tab navigation
+    @FindBy(xpath = "//a[contains(text(),'Buy') or @title='Buy' or contains(@href,'buy')]")
+    private WebElement buyTab;
+    
+    @FindBy(xpath = "//div[@class='drop-heading' and contains(text(),'Popular Choices')]")
+    private WebElement popularChoicesHeading;
+    
+    @FindBy(xpath = "//div[@class='drop-call']//ul[@class='drop-links']//a[contains(text(),'Ready to Move')]")
+    private WebElement readyToMoveLink;
+    
+    @FindBy(xpath = "//ul[@class='drop-links']//li//a[contains(text(),'Ready to Move') or contains(text(),'Ready To Move')]")
+    private WebElement readyToMoveLinkAlt;
+    
+    // New Page Elements for Search functionality
+    @FindBy(xpath = "//input[@placeholder='Search for locality, landmark, project or builder' or @placeholder='Enter City/Locality' or contains(@class,'search-input')]")
+    private WebElement searchLocationField;
+    
+    @FindBy(xpath = "//button[contains(@class,'search-btn') or contains(text(),'Search') or @type='submit']")
+    private WebElement searchButton;
+    
+    @FindBy(xpath = "//div[contains(@class,'search-results') or contains(@class,'property-card') or contains(@class,'srpWrap')]")
+    private List<WebElement> searchResults;
+    
+    @FindBy(xpath = "//div[contains(@class,'property-title') or contains(@class,'prop-title')]")
+    private List<WebElement> propertyTitles;
+    
+    @FindBy(xpath = "//span[contains(@class,'location') or contains(@class,'locality')]")
+    private List<WebElement> propertyLocations;
+    
+    public ByPage(WebDriver driver) {
+        super(driver);
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        this.actions = new Actions(driver);
+        PageFactory.initElements(driver, this);
+    }
+    
+    // Existing methods for Ready to Move navigation
+    public void navigateToMagicBricks() {
+        driver.get("https://www.magicbricks.com");
+        wait.until(ExpectedConditions.elementToBeClickable(buyTab));
+        
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+    
+    public void hoverOnBuyTab() {
+        wait.until(ExpectedConditions.visibilityOf(buyTab));
+        actions.moveToElement(buyTab).perform();
+        
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+    
+    public void waitForPopularChoicesDropdown() {
+        try {
+            wait.until(ExpectedConditions.visibilityOf(popularChoicesHeading));
+        } catch (Exception e) {
+            System.out.println("Popular Choices heading not found with primary locator");
+            wait.until(ExpectedConditions.presenceOfElementLocated(
+                org.openqa.selenium.By.xpath("//div[@class='drop-call']")));
+        }
+    }
+    
+    public void clickReadyToMoveLink() {
+        WebElement linkToClick = null;
+        
+        try {
+            linkToClick = wait.until(ExpectedConditions.elementToBeClickable(readyToMoveLink));
+        } catch (Exception e) {
+            try {
+                linkToClick = wait.until(ExpectedConditions.elementToBeClickable(readyToMoveLinkAlt));
+            } catch (Exception e2) {
+                linkToClick = wait.until(ExpectedConditions.elementToBeClickable(
+                    org.openqa.selenium.By.xpath("//a[contains(text(),'Ready') and contains(@target,'_blank')]")));
+            }
+        }
+        
+        if (linkToClick != null) {
+            String originalWindow = driver.getWindowHandle();
+            linkToClick.click();
+            
+            try {
+                wait.until(ExpectedConditions.numberOfWindowsToBe(2));
+            } catch (Exception e) {
+                System.out.println("New tab may not have opened as expected");
+            }
+        } else {
+            throw new RuntimeException("Ready to Move link not found");
+        }
+    }
+    
+    public boolean verifyNewTabOpened() {
+        try {
+            Set<String> windowHandles = driver.getWindowHandles();
+            return windowHandles.size() > 1;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    public void switchToNewTab() {
+        Set<String> windowHandles = driver.getWindowHandles();
+        for (String windowHandle : windowHandles) {
+            if (!windowHandle.equals(driver.getWindowHandle())) {
+                driver.switchTo().window(windowHandle);
+                break;
+            }
+        }
+    }
+    
+    // New methods for Search functionality
+    public void enterLocationInSearchField(String location) {
+        try {
+            wait.until(ExpectedConditions.elementToBeClickable(searchLocationField));
+            searchLocationField.clear();
+            searchLocationField.sendKeys(location);
+            
+            // Wait a moment for any autocomplete to appear
+            Thread.sleep(1000);
+            
+            System.out.println("Entered location: " + location);
+        } catch (Exception e) {
+            // Try alternative search field locators
+            try {
+                WebElement altSearchField = wait.until(ExpectedConditions.elementToBeClickable(
+                    org.openqa.selenium.By.xpath("//input[@type='text' and (contains(@placeholder,'city') or contains(@placeholder,'location'))]")));
+                altSearchField.clear();
+                altSearchField.sendKeys(location);
+                System.out.println("Entered location using alternative locator: " + location);
+            } catch (Exception e2) {
+                throw new RuntimeException("Search field not found: " + e2.getMessage());
+            }
+        }
+    }
+    
+    public void clickSearchButton() {
+        try {
+            wait.until(ExpectedConditions.elementToBeClickable(searchButton));
+            searchButton.click();
+            System.out.println("Clicked search button");
+            
+            // Wait for search results to load
+            Thread.sleep(3000);
+        } catch (Exception e) {
+            // Try alternative search button locators
+            try {
+                WebElement altSearchBtn = wait.until(ExpectedConditions.elementToBeClickable(
+                    org.openqa.selenium.By.xpath("//button[@type='button' and contains(@class,'btn')]")));
+                altSearchBtn.click();
+                System.out.println("Clicked search button using alternative locator");
+                Thread.sleep(3000);
+            } catch (Exception e2) {
+                // Try submitting the form by pressing Enter
+                searchLocationField.sendKeys(org.openqa.selenium.Keys.ENTER);
+                System.out.println("Submitted search using Enter key");
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+    }
+    
+    public boolean verifySearchResultsDisplayed() {
+        try {
+            // Wait for search results to appear
+            wait.until(ExpectedConditions.presenceOfElementLocated(
+                org.openqa.selenium.By.xpath("//div[contains(@class,'srpWrap') or contains(@class,'search-results') or contains(@class,'property')]")));
+            
+            // Check if we have search results
+            List<WebElement> results = driver.findElements(
+                org.openqa.selenium.By.xpath("//div[contains(@class,'property') or contains(@class,'card')]"));
+            
+            boolean hasResults = results.size() > 0;
+            System.out.println("Search results found: " + results.size());
+            return hasResults;
+        } catch (Exception e) {
+            System.out.println("No search results found: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    public boolean verifyResultsContainSearchedLocation(String searchedLocation) {
+        try {
+            // Get all property location elements
+            List<WebElement> locationElements = driver.findElements(
+                org.openqa.selenium.By.xpath("//span[contains(@class,'location') or contains(@class,'locality') or contains(@class,'address')]"));
+            
+            if (locationElements.isEmpty()) {
+                // Try alternative locators for property locations
+                locationElements = driver.findElements(
+                    org.openqa.selenium.By.xpath("//div[contains(@class,'property')]//text()[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '" + searchedLocation.toLowerCase() + "')]"));
+            }
+            
+            boolean locationFound = false;
+            int matchCount = 0;
+            
+            for (WebElement locationElement : locationElements) {
+                String locationText = locationElement.getText().toLowerCase();
+                if (locationText.contains(searchedLocation.toLowerCase())) {
+                    locationFound = true;
+                    matchCount++;
+                }
+            }
+            
+            System.out.println("Properties matching location '" + searchedLocation + "': " + matchCount);
+            return locationFound;
+        } catch (Exception e) {
+            System.out.println("Error verifying location in results: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    public String getCurrentUrl() {
+        return driver.getCurrentUrl();
+    }
+    
+    public String getPageTitle() {
+        return driver.getTitle();
+    }
+    
+    // Complete test flow for Ready to Move navigation
+    public boolean executeReadyToMoveTest() {
+        try {
+            System.out.println("Step 1: Navigating to MagicBricks...");
+            navigateToMagicBricks();
+            
+            System.out.println("Step 2: Hovering on Buy tab...");
+            hoverOnBuyTab();
+            
+            System.out.println("Step 3: Waiting for Popular Choices dropdown...");
+            waitForPopularChoicesDropdown();
+            
+            System.out.println("Step 4: Clicking Ready to Move link...");
+            clickReadyToMoveLink();
+            
+            System.out.println("Step 5: Verifying new tab opened...");
+            boolean newTabOpened = verifyNewTabOpened();
+            
+            if (newTabOpened) {
+                System.out.println("Step 6: Switching to new tab...");
+                switchToNewTab();
+                System.out.println("Ready to Move navigation test completed successfully!");
+                return true;
+            } else {
+                System.out.println("New tab was not opened as expected");
+                return false;
+            }
+        } catch (Exception e) {
+            System.err.println("Ready to Move test execution failed at: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    // Complete test flow for Location Search
+    public boolean executeLocationSearchTest(String location) {
+        try {
+            System.out.println("=== Starting Location Search Test for: " + location + " ===");
+            
+            System.out.println("Step 1: Entering location in search field...");
+            enterLocationInSearchField(location);
+            
+            System.out.println("Step 2: Clicking search button...");
+            clickSearchButton();
+            
+            System.out.println("Step 3: Verifying search results are displayed...");
+            boolean resultsDisplayed = verifySearchResultsDisplayed();
+            
+            if (!resultsDisplayed) {
+                System.out.println("No search results displayed for location: " + location);
+                return false;
+            }
+            
+            System.out.println("Step 4: Verifying results contain searched location...");
+            boolean locationMatched = verifyResultsContainSearchedLocation(location);
+            
+            if (locationMatched) {
+                System.out.println("Location search test completed successfully for: " + location);
+                return true;
+            } else {
+                System.out.println("Search results do not contain properties from: " + location);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Location search test execution failed for " + location + ": " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    // Debug method to help troubleshoot
+    public void debugDropdownElements() {
+        try {
+            hoverOnBuyTab();
+            Thread.sleep(2000);
+            
+            java.util.List<WebElement> dropdownElements = driver.findElements(
+                org.openqa.selenium.By.xpath("//div[@class='drop-call']//a"));
+            
+            System.out.println("Found " + dropdownElements.size() + " dropdown links:");
+            for (int i = 0; i < dropdownElements.size(); i++) {
+                WebElement element = dropdownElements.get(i);
+                System.out.println((i+1) + ". Text: '" + element.getText() + "' | href: '" + 
+                                 element.getAttribute("href") + "'");
+            }
+        } catch (Exception e) {
+            System.err.println("Debug failed: " + e.getMessage());
+        }
+    }
+    
+    // Debug method for search page
+    public void debugSearchElements() {
+        try {
+            System.out.println("=== Debugging Search Elements ===");
+            
+            // Find all input fields
+            List<WebElement> inputFields = driver.findElements(
+                org.openqa.selenium.By.xpath("//input[@type='text']"));
+            System.out.println("Found " + inputFields.size() + " input fields:");
+            for (int i = 0; i < inputFields.size(); i++) {
+                WebElement input = inputFields.get(i);
+                System.out.println((i+1) + ". Placeholder: '" + input.getAttribute("placeholder") + 
+                                 "' | Class: '" + input.getAttribute("class") + "'");
+            }
+            
+            // Find all buttons
+            List<WebElement> buttons = driver.findElements(
+                org.openqa.selenium.By.xpath("//button"));
+            System.out.println("Found " + buttons.size() + " buttons:");
+            for (int i = 0; i < buttons.size(); i++) {
+                WebElement button = buttons.get(i);
+                System.out.println((i+1) + ". Text: '" + button.getText() + 
+                                 "' | Class: '" + button.getAttribute("class") + "'");
+            }
+        } catch (Exception e) {
+            System.err.println("Search debug failed: " + e.getMessage());
+        }
+    }
+}
+
+---
+
+
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.DataProvider;
+import org.testng.Assert;
+
+public class MainTest {
+    
+    @BeforeClass
+    public void setUpTest() {
+        BaseSteps.setUp();
+    }
+
+    @AfterClass
+    public void tearDownTest() {
+        BaseSteps.tearDown();
+    }
+    
+    @Test(priority = 1)
+    public void testReadyToMoveNavigation() {
+        ByPage byPage = new ByPage(BaseSteps.getDriver());
+        
+        boolean testResult = byPage.executeReadyToMoveTest();
+        
+        Assert.assertTrue(testResult, "Ready To Move navigation test failed");
+        
+        String currentUrl = byPage.getCurrentUrl();
+        Assert.assertTrue(currentUrl.contains("magicbricks.com"), 
+                         "Not navigated to correct domain");
+        
+        System.out.println("TC_BUY_001: Ready to Move navigation test completed successfully!");
+        System.out.println("Current URL: " + currentUrl);
+        System.out.println("Page Title: " + byPage.getPageTitle());
+    }
+    
+    @DataProvider(name = "locationData")
+    public Object[][] getLocationData() {
+        return new Object[][] {
+            {"Mumbai"},
+            {"Delhi"},
+            {"Bangalore"},
+            {"Pune"},
+            {"Chennai"}
+        };
+    }
+    
+    @Test(priority = 2, dataProvider = "locationData", dependsOnMethods = "testReadyToMoveNavigation")
+    public void testSearchPropertiesByLocation(String location) {
+        ByPage byPage = new ByPage(BaseSteps.getDriver());
+        
+        // Optional: Debug search elements if needed
+        // byPage.debugSearchElements();
+        
+        boolean searchResult = byPage.executeLocationSearchTest(location);
+        
+        Assert.assertTrue(searchResult, "Search test failed for location: " + location);
+        
+        System.out.println("TC_BUY_002: Search properties test completed successfully for: " + location);
+        
+        // Add small delay between location searches
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+    
+    // Optional debug tests
+    @Test(enabled = false)
+    public void debugReadyToMoveDropdown() {
+        ByPage byPage = new ByPage(BaseSteps.getDriver());
+        byPage.navigateToMagicBricks();
+        byPage.debugDropdownElements();
+    }
+    
+    @Test(enabled = false)
+    public void debugSearchPage() {
+        ByPage byPage = new ByPage(BaseSteps.getDriver());
+        // First navigate to Ready to Move page
+        byPage.executeReadyToMoveTest();
+        // Then debug search elements
+        byPage.debugSearchElements();
+    }
+}
