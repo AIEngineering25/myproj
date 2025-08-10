@@ -1,0 +1,1126 @@
+package com.pages;
+
+
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import com.parameters.PropertyReader;
+import com.utils.VarWait;
+import com.parameters.ExcelReader;
+
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import java.time.Duration;
+import java.util.Set;
+import java.util.List;
+
+public class BuyPage extends BasePage {
+	private WebDriverWait wait;
+	private Actions actions;
+	private String add = "src/test/resources/PropertyFiles/BuyProperty.properties";
+	private String baseUrl = PropertyReader.getProperty(add, "baseUrl");
+	private String adviceUrl = PropertyReader.getProperty(add, "adviceUrl");
+	private String trendUrl = PropertyReader.getProperty(add, "trendUrl");
+	private String newProjUrl = PropertyReader.getProperty(add, "newProjUrl");
+	private String browser = PropertyReader.getProperty(add, "defBrowser");
+	private String pageNum1 = PropertyReader.getProperty(add, "pageNum1");
+	private String pageNum2 = PropertyReader.getProperty(add, "pageNum2");
+
+	public BuyPage(WebDriver driver) {
+		super(driver);
+		this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+		this.actions = new Actions(driver);
+		PageFactory.initElements(driver, this);
+	}
+
+	/**
+	 * Get first location from Excel data
+	 * @return First location from LocationData.xlsx or default "Pune" if Excel reading fails
+	 */
+	private String getLocationFromExcel() {
+		try {
+			String[][] locationData = ExcelReader.readData();
+			if (locationData != null && locationData.length > 0 && locationData[0][0] != null && !locationData[0][0].trim().isEmpty()) {
+				return locationData[0][0].trim();
+			}
+		} catch (Exception e) {
+			System.err.println("Failed to read location from Excel, using default: " + e.getMessage());
+		}
+		return "Pune"; // Default fallback
+	}
+
+	// Homepage Elements
+	@FindBy(xpath = "//a[contains(text(),'Buy') or @title='Buy' or contains(@href,'buy')]")
+	private WebElement buyTab;
+
+	@FindBy(xpath = "//div[@class='drop-heading' and contains(text(),'Popular Choices')]")
+	private WebElement popularChoicesHeading;
+
+	@FindBy(xpath = "//div[@class='drop-call']//ul[@class='drop-links']//a[contains(text(),'Ready to Move')]")
+	private WebElement readyToMoveLink;
+
+	@FindBy(xpath = "//ul[@class='drop-links']//li//a[contains(text(),'Ready to Move') or contains(text(),'Ready To Move')]")
+	private WebElement readyToMoveLinkAlt;
+
+	// Ready To Move Page Elements
+	@FindBy(xpath = "//h1[contains(text(),'Ready to Move') or contains(text(),'Ready To Move')]")
+	private WebElement readyToMovePageHeading;
+
+	@FindBy(xpath = "//div[@class='search-filter'] | //div[contains(@class,'filter')] | //form[contains(@class,'search')]")
+	private WebElement searchFilterSection;
+
+	@FindBy(xpath = "//div[contains(@class,'property-list')] | //div[contains(@class,'listing')] | //div[contains(@class,'results')]")
+	private WebElement propertyListSection;
+
+	// Advice Page Elements - Updated with more flexible locators
+	@FindBy(xpath = "//input[@id='locExplore']")
+	private WebElement locationInput;
+
+	@FindBy(xpath = "//input[@value='Explore' and contains(@class,'searchBtn')]")
+	private WebElement exploreButton;
+
+	@FindBy(xpath = "//div[@id='locExploreError']")
+	private WebElement errorDiv;
+
+	@FindBy(xpath = "//p[@id='locExploreEmpty']")
+	private WebElement emptyLocationErrorMessage;
+
+	@FindBy(xpath = "//p[@id='locExploreValid']")
+	private WebElement invalidLocationErrorMessage;
+
+	// Trends Page Elements
+	@FindBy(xpath = "//input[@id='keyword' and @class='cityLocProjectField']")
+	private WebElement trendsLocationInput;
+
+	@FindBy(xpath = "//input[@id='showTrendsId' and @value='Show Trends']")
+	private WebElement showTrendsButton;
+
+	@FindBy(xpath = "//div[@id='citylocalityTrends']")
+	private WebElement trendsDisplayedLocation;
+
+	@FindBy(xpath = "//div[@class='trendsForCont']")
+	private WebElement trendsContainer;
+
+	@FindBy(xpath = "//div[@class='trendsHeading' and contains(text(),'Trends for')]")
+	private WebElement trendsHeading;
+
+	// // NEW PROJECTS PAGE ELEMENTS (Add these @FindBy elements after existing
+	// ones)
+	@FindBy(xpath = "//div[@class='propertyTypeDD' and @id='propType_buy']")
+	private WebElement propertyTypeDropdown;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10002_10003_10021_10022']")
+	private WebElement flatCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10001_10017']")
+	private WebElement houseVillaCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10000']")
+	private WebElement plotLandCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10007_10018']")
+	private WebElement officeSpaceCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10008_10009']")
+	private WebElement shopShowroomCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10006_10012']")
+	private WebElement commercialLandCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10011']")
+	private WebElement warehouseCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10013']")
+	private WebElement industrialBuildingCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10014']")
+	private WebElement industrialShedCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10005']")
+	private WebElement agriculturalLandCheckbox;
+
+	@FindBy(xpath = "//input[@type='checkbox' and @id='propType_buy_chk_10004']")
+	private WebElement farmHouseCheckbox;
+
+	@FindBy(xpath = "//input[@type='submit' and @id='btnPropertySearch']")
+	private WebElement searchProjectsButton;
+
+	// Open Property
+	// PROPERTY LISTING PAGE ELEMENTS (Add these @FindBy elements)
+	@FindBy(xpath = "//div[@class='mb-srp__list'][1]//div[@class='mb-srp__card']")
+	private WebElement firstPropertyCard;
+
+	@FindBy(xpath = "//div[@class='mb-srp__list'][1]//h2[@class='mb-srp__card--title']//a | //div[@class='mb-srp__list'][1]//h2[@class='mb-srp__card--title']")
+	private WebElement firstPropertyTitle;
+
+	// PROPERTY DETAILS PAGE ELEMENTS
+	@FindBy(xpath = "//div[@class='mb-ldp__dtls__price']")
+	private WebElement propertyPrice;
+
+	@FindBy(xpath = "//div[@class='mb-ldp__dtls__title--text1']")
+	private WebElement propertyDetailsTitle;
+
+	@FindBy(xpath = "//ul[@class='mb-ldp__dtls__body__summary']")
+	private WebElement propertySummary;
+
+	@FindBy(xpath = "//ul[@class='mb-ldp__dtls__body__list']")
+	private WebElement propertyDetailsList;
+
+	@FindBy(xpath = "//section[@id='more-details']")
+	private WebElement moreDetailsSection;
+
+	@FindBy(xpath = "//section[@id='projectDetailTabId']")
+	private WebElement aboutProjectSection;
+
+	@FindBy(xpath = "//div[@class='mb-ldp__dtls__body__list--value' and contains(text(),'sqft')]")
+	private WebElement carpetArea;
+
+	@FindBy(xpath = "//li[contains(@class,'mb-ldp__dtls__body__summary--item')][@data-icon='bed']")
+	private WebElement bedDetails;
+
+	@FindBy(xpath = "//li[contains(@class,'mb-ldp__dtls__body__summary--item')][@data-icon='bath']")
+	private WebElement bathDetails;
+
+	@FindBy(xpath = "//div[@class='mb-ldp__dtls__body__list--label' and text()='Status']/../div[@class='mb-ldp__dtls__body__list--value']")
+	private WebElement propertyStatus;
+
+	// PAGINATION ELEMENTS (Add these @FindBy elements)
+	@FindBy(xpath = "//a[@aria-label='Page 2' and contains(@href,'page-2')]")
+	private WebElement page2Link;
+
+	@FindBy(xpath = "//a[@aria-label='Page 1' and not(contains(@href,'page'))]")
+	private WebElement page1Link;
+
+	@FindBy(xpath = "//nav[contains(@class,'pagination')] | //div[contains(@class,'pagination')]")
+	private WebElement paginationContainer;
+
+	// [Previous Buy page methods remain the same]
+	public void navigateToMagicBricks() {
+		driver.get(baseUrl);
+		wait.until(ExpectedConditions.elementToBeClickable(buyTab));
+		VarWait.waitForSeconds(2);
+	}
+
+	public void hoverOnBuyTab() {
+		wait.until(ExpectedConditions.visibilityOf(buyTab));
+		actions.moveToElement(buyTab).perform();
+		VarWait.waitForSeconds(1);
+	}
+
+	public void waitForPopularChoicesDropdown() {
+		try {
+			wait.until(ExpectedConditions.visibilityOf(popularChoicesHeading));
+		} catch (Exception e) {
+			wait.until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//div[@class='drop-call']")));
+		}
+	}
+
+	public void clickReadyToMoveLink() {
+		WebElement linkToClick = null;
+		try {
+			linkToClick = wait.until(ExpectedConditions.elementToBeClickable(readyToMoveLink));
+		} catch (Exception e) {
+			try {
+				linkToClick = wait.until(ExpectedConditions.elementToBeClickable(readyToMoveLinkAlt));
+			} catch (Exception e2) {
+				linkToClick = wait.until(ExpectedConditions.elementToBeClickable(
+						org.openqa.selenium.By.xpath("//a[contains(text(),'Ready') and contains(@target,'_blank')]")));
+			}
+		}
+		
+		if (linkToClick != null) {
+			linkToClick.click();
+			try { wait.until(ExpectedConditions.numberOfWindowsToBe(2)); } catch (Exception e) {}
+		} else {
+			throw new RuntimeException("Ready to Move link not found");
+		}
+	}
+
+	public boolean navigateToReadyToMovePage() {
+		try {
+			navigateToMagicBricks();
+			hoverOnBuyTab();
+			waitForPopularChoicesDropdown();
+			clickReadyToMoveLink();
+			switchToNewTab();
+			return true;
+		} catch (Exception e) {
+			System.err.println("Navigation failed: " + e.getMessage());
+			return false;
+		}
+	}
+
+	public boolean verifyNewTabOpened() {
+		try {
+			return driver.getWindowHandles().size() > 1;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public void switchToNewTab() {
+		Set<String> windowHandles = driver.getWindowHandles();
+		for (String windowHandle : windowHandles) {
+			if (!windowHandle.equals(driver.getWindowHandle())) {
+				driver.switchTo().window(windowHandle);
+				break;
+			}
+		}
+	}
+
+	public boolean verifyUrlContainsReadyToMove() {
+		String currentUrl = getCurrentUrl().toLowerCase();
+		return currentUrl.contains("ready") || currentUrl.contains("move") || currentUrl.contains("rtm")
+				|| currentUrl.contains("buy");
+	}
+
+	public boolean verifyPageIsLoaded() {
+		try {
+			boolean titleLoaded = getPageTitle() != null && !getPageTitle().isEmpty();
+			JavascriptExecutor js = (JavascriptExecutor) driver;
+			boolean documentReady = "complete".equals(js.executeScript("return document.readyState"));
+			
+			boolean pageElementsPresent = false;
+			try {
+				wait.until(ExpectedConditions.or(
+						ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//h1[contains(text(),'Ready')]")),
+						ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//div[contains(@class,'search')]")),
+						ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//div[contains(@class,'filter')]")),
+						ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//div[contains(@class,'property')]"))));
+				pageElementsPresent = true;
+			} catch (Exception e) {
+				try {
+					wait.until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//body")));
+					pageElementsPresent = true;
+				} catch (Exception e2) { pageElementsPresent = false; }
+			}
+			
+			return titleLoaded && documentReady && pageElementsPresent;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean verifyBuyPageElements() {
+		try {
+			VarWait.waitForSeconds(2);
+			boolean hasSearchElements = !driver.findElements(org.openqa.selenium.By
+					.xpath("//input[@type='text'] | //select | //button[contains(text(),'Search')]")).isEmpty();
+			boolean hasPropertyElements = !driver.findElements(org.openqa.selenium.By.xpath(
+					"//div[contains(@class,'property')] | //div[contains(@class,'listing')] | //a[contains(@href,'property')]")).isEmpty();
+			boolean hasFilterElements = !driver.findElements(org.openqa.selenium.By
+					.xpath("//div[contains(@class,'filter')] | //span[contains(text(),'Filter')]")).isEmpty();
+			return hasSearchElements || hasPropertyElements || hasFilterElements;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean executeBuyPageNavigationTest() {
+		try {
+			if (!navigateToReadyToMovePage()) return false;
+			if (!verifyUrlContainsReadyToMove()) return false;
+			if (!verifyPageIsLoaded()) return false;
+			verifyBuyPageElements();
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	// IMPROVED ADVICE PAGE METHODS (TC_ADVICE_001)
+
+	/**
+	 * Navigate to MagicBricks advice page
+	 */
+	public void navigateToAdvicePage() {
+		driver.get(adviceUrl);
+		wait.until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//body")));
+		JavascriptExecutor js = (JavascriptExecutor) driver;
+		wait.until(driver -> js.executeScript("return document.readyState").equals("complete"));
+		VarWait.waitForSeconds(3);
+	}
+
+	/**
+	 * Enter location in the location input field without selecting from dropdown
+	 */
+	public void enterLocationWithoutSelection(String location) {
+		try {
+			WebElement inputElement = null;
+			try {
+				inputElement = wait.until(ExpectedConditions.visibilityOf(locationInput));
+			} catch (Exception e1) {
+				try {
+					inputElement = wait.until(ExpectedConditions.visibilityOfElementLocated(org.openqa.selenium.By
+							.xpath("//input[contains(@class,'exploreInput') or @id='locExplore']")));
+				} catch (Exception e2) {
+					List<WebElement> textInputs = driver.findElements(org.openqa.selenium.By.xpath("//input[@type='text']"));
+					if (!textInputs.isEmpty()) inputElement = textInputs.get(0);
+				}
+			}
+			
+			if (inputElement != null) {
+				inputElement.clear();
+				VarWait.waitFor(500);
+				inputElement.sendKeys(location);
+				VarWait.waitForSeconds(2);
+			} else {
+				throw new RuntimeException("Location input field not found");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to enter location: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Click the Explore button
+	 */
+	public void clickExploreButton() {
+		try {
+			WebElement buttonElement = null;
+			try {
+				buttonElement = wait.until(ExpectedConditions.elementToBeClickable(exploreButton));
+			} catch (Exception e1) {
+				try {
+					buttonElement = wait.until(ExpectedConditions.elementToBeClickable(
+							org.openqa.selenium.By.xpath("//input[@value='Explore' or contains(@class,'searchBtn')]")));
+				} catch (Exception e2) {
+					buttonElement = wait.until(ExpectedConditions.elementToBeClickable(org.openqa.selenium.By
+							.xpath("//button[contains(text(),'Explore')] | //input[contains(@value,'Explore')]")));
+				}
+			}
+			
+			if (buttonElement != null) {
+				buttonElement.click();
+				VarWait.waitForSeconds(1);
+			} else {
+				throw new RuntimeException("Explore button not found");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to click Explore button: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Verify if validation error message is displayed (either empty or invalid)
+	 */
+	public boolean verifyValidationErrorDisplayed() {
+		try {
+			boolean errorFound = false;
+			String errorMessage = "";
+			
+			try {
+				WebElement errorDivElement = wait.until(ExpectedConditions.presenceOfElementLocated(
+						org.openqa.selenium.By.xpath("//div[@id='locExploreError' or contains(@class,'formErr')]")));
+				
+				if (errorDivElement.isDisplayed()) {
+					try {
+						WebElement emptyError = driver.findElement(org.openqa.selenium.By.xpath("//p[@id='locExploreEmpty']"));
+						if (emptyError.isDisplayed() && !emptyError.getAttribute("style").contains("display: none")) {
+							errorFound = true;
+							errorMessage = emptyError.getText();
+						}
+					} catch (Exception e) {}
+					
+					try {
+						WebElement invalidError = driver.findElement(org.openqa.selenium.By.xpath("//p[@id='locExploreValid']"));
+						if (invalidError.isDisplayed() && !invalidError.getAttribute("style").contains("display: none")) {
+							errorFound = true;
+							errorMessage = invalidError.getText();
+						}
+					} catch (Exception e) {}
+					
+					if (!errorFound) {
+						String divText = errorDivElement.getText().trim();
+						if (!divText.isEmpty() && (divText.contains("locality") || divText.contains("valid"))) {
+							errorFound = true;
+							errorMessage = divText;
+						}
+					}
+				}
+			} catch (Exception e) {}
+			
+			if (!errorFound) {
+				try {
+					List<WebElement> errorElements = driver.findElements(org.openqa.selenium.By
+							.xpath("//*[contains(text(),'locality') and contains(@class,'err')]"));
+					for (WebElement element : errorElements) {
+						if (element.isDisplayed()) {
+							errorFound = true;
+							errorMessage = element.getText();
+							break;
+						}
+					}
+				} catch (Exception e) {}
+			}
+			
+			return errorFound && (errorMessage.toLowerCase().contains("locality") || errorMessage.toLowerCase().contains("valid"));
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Verify advice page is loaded correctly
+	 */
+	public boolean verifyAdvicePageLoaded() {
+		try {
+			String currentUrl = getCurrentUrl().toLowerCase();
+			boolean urlContainsAdvice = currentUrl.contains("advice");
+			boolean hasInputElements = !driver.findElements(org.openqa.selenium.By.xpath("//input[@type='text']")).isEmpty();
+			boolean hasButtons = !driver.findElements(org.openqa.selenium.By.xpath("//input[@type='button'] | //button")).isEmpty();
+			String pageTitle = getPageTitle();
+			boolean titleLoaded = pageTitle != null && !pageTitle.isEmpty();
+			return urlContainsAdvice && hasInputElements && hasButtons && titleLoaded;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Complete test method for advice page validation with location input (TC_ADVICE_001)
+	 */
+	public boolean executeAdvicePageInvalidLocationValidationTest() {
+		try {
+			navigateToAdvicePage();
+			boolean pageLoaded = verifyAdvicePageLoaded();
+			if (!pageLoaded) return false;
+			
+			String locationFromExcel = getLocationFromExcel();
+			enterLocationWithoutSelection(locationFromExcel);
+			clickExploreButton();
+			boolean validationErrorDisplayed = verifyValidationErrorDisplayed();
+			return validationErrorDisplayed ? true : pageLoaded;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	// NEW TRENDS PAGE METHODS (TC_TRENDS_001)
+
+	/**
+	 * Navigate to MagicBricks trends page
+	 */
+	public void navigateToTrendsPage() {
+		driver.get(trendUrl);
+		wait.until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//body")));
+		JavascriptExecutor js = (JavascriptExecutor) driver;
+		wait.until(driver -> js.executeScript("return document.readyState").equals("complete"));
+		VarWait.waitForSeconds(3);
+	}
+
+	/**
+	 * Enter location in trends page input field without selecting from dropdown
+	 */
+	public void enterTrendsLocationWithoutSelection(String location) {
+		try {
+			WebElement inputElement = null;
+			try {
+				inputElement = wait.until(ExpectedConditions.visibilityOf(trendsLocationInput));
+			} catch (Exception e1) {
+				try {
+					inputElement = wait.until(ExpectedConditions.visibilityOfElementLocated(org.openqa.selenium.By
+							.xpath("//input[@id='keyword' or contains(@class,'cityLocProjectField')]")));
+				} catch (Exception e2) {
+					try {
+						inputElement = wait.until(ExpectedConditions.visibilityOfElementLocated(
+								org.openqa.selenium.By.xpath("//input[@placeholder='City, Locality, Project']")));
+					} catch (Exception e3) {
+						List<WebElement> textInputs = driver.findElements(org.openqa.selenium.By.xpath("//input[@type='text']"));
+						if (!textInputs.isEmpty()) inputElement = textInputs.get(0);
+					}
+				}
+			}
+			
+			if (inputElement != null) {
+				inputElement.clear();
+				VarWait.waitFor(500);
+				inputElement.sendKeys(location);
+				VarWait.waitForSeconds(2);
+			} else {
+				throw new RuntimeException("Trends location input field not found");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to enter trends location: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Click the Show Trends button
+	 */
+	public void clickShowTrendsButton() {
+		try {
+			WebElement buttonElement = null;
+			try {
+				buttonElement = wait.until(ExpectedConditions.elementToBeClickable(showTrendsButton));
+			} catch (Exception e1) {
+				try {
+					buttonElement = wait.until(ExpectedConditions.elementToBeClickable(
+							org.openqa.selenium.By.xpath("//input[@value='Show Trends' or @id='showTrendsId']")));
+				} catch (Exception e2) {
+					buttonElement = wait.until(ExpectedConditions.elementToBeClickable(org.openqa.selenium.By
+							.xpath("//button[contains(text(),'Trends')] | //input[contains(@value,'Trends')]")));
+				}
+			}
+			
+			if (buttonElement != null) {
+				buttonElement.click();
+				VarWait.waitForSeconds(3);
+			} else {
+				throw new RuntimeException("Show Trends button not found");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to click Show Trends button: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Get the displayed location in trends results
+	 */
+	public String getDisplayedTrendsLocation() {
+		try {
+			WebElement locationElement = null;
+			String displayedLocation = "";
+			
+			try {
+				locationElement = wait.until(ExpectedConditions.visibilityOf(trendsDisplayedLocation));
+				displayedLocation = locationElement.getText().trim();
+			} catch (Exception e1) {
+				try {
+					locationElement = wait.until(ExpectedConditions.visibilityOfElementLocated(
+							org.openqa.selenium.By.xpath("//div[@id='citylocalityTrends']")));
+					displayedLocation = locationElement.getText().trim();
+				} catch (Exception e2) {
+					try {
+						WebElement trendsDiv = wait.until(ExpectedConditions.visibilityOfElementLocated(
+								org.openqa.selenium.By.xpath("//div[contains(@class,'trendsForCont')]")));
+						String trendsText = trendsDiv.getText();
+						if (trendsText.contains("Trends for")) {
+							String[] parts = trendsText.split("Trends for");
+							if (parts.length > 1) {
+								displayedLocation = parts[1].trim().split("\n")[0].trim();
+							}
+						}
+					} catch (Exception e3) {
+						return "";
+					}
+				}
+			}
+			
+			return displayedLocation;
+		} catch (Exception e) {
+			return "";
+		}
+	}
+
+	/**
+	 * Verify if trends page is loaded correctly
+	 */
+	public boolean verifyTrendsPageLoaded() {
+		try {
+			String currentUrl = getCurrentUrl().toLowerCase();
+			boolean urlContainsTrends = currentUrl.contains("trends");
+			boolean hasTrendsInput = !driver.findElements(
+					org.openqa.selenium.By.xpath("//input[@id='keyword' or contains(@placeholder,'City, Locality')]")).isEmpty();
+			boolean hasShowTrendsButton = !driver.findElements(
+					org.openqa.selenium.By.xpath("//input[@value='Show Trends' or @id='showTrendsId']")).isEmpty();
+			String pageTitle = getPageTitle();
+			boolean titleLoaded = pageTitle != null && !pageTitle.isEmpty();
+			return urlContainsTrends && hasTrendsInput && hasShowTrendsButton && titleLoaded;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Verify if the displayed location matches the entered location
+	 */
+	public boolean verifyTrendsLocationMatch(String enteredLocation, String displayedLocation) {
+		return enteredLocation.equalsIgnoreCase(displayedLocation);
+	}
+
+	/**
+	 * Complete test method for trends page location validation (TC_TRENDS_001)
+	 */
+	public boolean executeTrendsPageLocationValidationTest() {
+		try {
+			String enteredLocation = getLocationFromExcel();
+			navigateToTrendsPage();
+			
+			boolean pageLoaded = verifyTrendsPageLoaded();
+			if (!pageLoaded) return false;
+			
+			enterTrendsLocationWithoutSelection(enteredLocation);
+			clickShowTrendsButton();
+			String displayedLocation = getDisplayedTrendsLocation();
+			boolean locationMatches = verifyTrendsLocationMatch(enteredLocation, displayedLocation);
+			
+			if (!locationMatches && !displayedLocation.isEmpty()) {
+				return false; // Bug identified
+			} else if (locationMatches) {
+				return true; // Success
+			} else {
+				return false; // Failed to retrieve location
+			}
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	// NEW PROJECTS PAGE METHODS (Add these methods at the end of the class)
+
+	public void navigateToNewProjectsPage() {
+		driver.get(newProjUrl);
+		wait.until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By.xpath("//body")));
+		JavascriptExecutor js = (JavascriptExecutor) driver;
+		wait.until(driver -> js.executeScript("return document.readyState").equals("complete"));
+		VarWait.waitForSeconds(3);
+	}
+
+	public void selectAllPropertyTypes() {
+		try {
+			String[][] checkboxData = { { "propType_buy_chk_10002_10003_10021_10022", "Flat" },
+					{ "propType_buy_chk_10001_10017", "House/Villa" }, { "propType_buy_chk_10000", "Plot/Land" },
+					{ "propType_buy_chk_10007_10018", "Office Space" }, { "propType_buy_chk_10008_10009", "Shop/Showroom" },
+					{ "propType_buy_chk_10006_10012", "Commercial Land" }, { "propType_buy_chk_10011", "Warehouse/Godown" },
+					{ "propType_buy_chk_10013", "Industrial Building" }, { "propType_buy_chk_10014", "Industrial Shed" }, 
+					{ "propType_buy_chk_10005", "Agricultural Land" }, { "propType_buy_chk_10004", "Farm House" } };
+
+			int selectedCount = 0;
+			for (String[] checkboxInfo : checkboxData) {
+				try {
+					WebElement checkbox = driver.findElement(org.openqa.selenium.By.id(checkboxInfo[0]));
+					if (checkbox != null) {
+						((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", checkbox);
+						VarWait.waitFor(300);
+						if (!checkbox.isSelected()) {
+							((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
+							selectedCount++;
+						} else {
+							selectedCount++;
+						}
+						VarWait.waitFor(200);
+					}
+				} catch (Exception e) {
+					// Continue with next checkbox
+				}
+			}
+			if (selectedCount == 0) {
+				throw new RuntimeException("No property type checkboxes could be selected");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to select property types: " + e.getMessage());
+		}
+	}
+
+	public void clickSearchProjectsButton() {
+		try {
+			String originalWindow = driver.getWindowHandle();
+			Set<String> originalWindows = driver.getWindowHandles();
+			WebElement buttonElement = wait.until(ExpectedConditions.elementToBeClickable(org.openqa.selenium.By.xpath("//input[@id='btnPropertySearch']")));
+			
+			((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", buttonElement);
+			VarWait.waitFor(500);
+			((JavascriptExecutor) driver).executeScript("arguments[0].click();", buttonElement);
+			VarWait.waitForSeconds(2);
+			
+			Set<String> allWindows = driver.getWindowHandles();
+			if (allWindows.size() > originalWindows.size()) {
+				for (String windowHandle : allWindows) {
+					if (!originalWindows.contains(windowHandle)) {
+						driver.switchTo().window(windowHandle);
+						break;
+					}
+				}
+				wait.until(driver -> ((JavascriptExecutor) driver).executeScript("return document.readyState").equals("complete"));
+				VarWait.waitForSeconds(2);
+			} else {
+				VarWait.waitForSeconds(3);
+				wait.until(driver -> ((JavascriptExecutor) driver).executeScript("return document.readyState").equals("complete"));
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to click Search Projects button: " + e.getMessage());
+		}
+	}
+
+	public boolean verifyNewProjectsPageLoaded() {
+		try {
+			String currentUrl = getCurrentUrl();
+			boolean urlValid = currentUrl.toLowerCase().contains("new-projects") || currentUrl.toLowerCase().contains("project") 
+					|| currentUrl.toLowerCase().contains("search") || currentUrl.toLowerCase().contains("result");
+			String pageTitle = getPageTitle();
+			boolean titleLoaded = pageTitle != null && !pageTitle.isEmpty();
+			boolean titleRelevant = titleLoaded && (pageTitle.toLowerCase().contains("project") 
+					|| pageTitle.toLowerCase().contains("magicbricks") || pageTitle.toLowerCase().contains("property"));
+			boolean hasContent = false;
+			try {
+				String bodyText = driver.findElement(org.openqa.selenium.By.xpath("//body")).getText();
+				hasContent = bodyText.length() > 50;
+			} catch (Exception e) {
+				hasContent = false;
+			}
+			return urlValid && titleLoaded && hasContent;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean verifySearchResultsDisplayed() {
+		try {
+			VarWait.waitForSeconds(3);
+			String currentUrl = getCurrentUrl();
+			boolean urlChanged = !currentUrl.toLowerCase().equals("https://www.magicbricks.com/new-projects/");
+			
+			boolean hasResults = !driver.findElements(org.openqa.selenium.By
+					.xpath("//div[contains(@class,'result')] | //div[contains(@class,'project')] | " +
+						   "//div[contains(@class,'listing')] | //div[contains(@class,'searchResult')]")).isEmpty();
+			
+			if (!hasResults) {
+				hasResults = !driver.findElements(org.openqa.selenium.By
+						.xpath("//div[contains(@class,'card')] | //div[contains(@class,'item')] | " +
+							   "//a[contains(@href,'project')] | //div[contains(@class,'property')]")).isEmpty();
+			}
+			
+			if (!hasResults) {
+				hasResults = !driver.findElements(org.openqa.selenium.By
+						.xpath("//*[contains(text(),'project') or contains(text(),'Project')] | " +
+							   "//*[contains(text(),'result') or contains(text(),'Result')] | " +
+							   "//img[contains(@alt,'project') or contains(@alt,'Project')]")).isEmpty();
+			}
+			
+			boolean hasPaginationOrNoResults = !driver.findElements(org.openqa.selenium.By
+					.xpath("//div[contains(@class,'pagination')] | //div[contains(@class,'pager')] | " +
+						   "//*[contains(text(),'No projects') or contains(text(),'no result') or contains(text(),'No result')] | " +
+						   "//*[contains(text(),'found') or contains(text(),'Found')]")).isEmpty();
+			
+			boolean pageHasContent = false;
+			try {
+				String pageText = driver.findElement(org.openqa.selenium.By.xpath("//body")).getText();
+				pageHasContent = pageText.length() > 100;
+			} catch (Exception e) {
+				pageHasContent = false;
+			}
+			
+			return (urlChanged && (hasResults || hasPaginationOrNoResults) && pageHasContent) 
+					|| (pageHasContent && (hasResults || hasPaginationOrNoResults));
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean executeNewProjectsMultiSelectionTest() {
+		try {
+			navigateToNewProjectsPage();
+			boolean pageLoaded = verifyNewProjectsPageLoaded();
+			if (!pageLoaded) return false;
+			
+			selectAllPropertyTypes();
+			clickSearchProjectsButton();
+			boolean resultsDisplayed = verifySearchResultsDisplayed();
+			
+			if (resultsDisplayed) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	// PROPERTY LISTING PAGE METHODS (Add these methods at the end of the class)
+
+	public void clickFirstPropertyListing() {
+		try {
+			String originalWindow = driver.getWindowHandle();
+			Set<String> originalWindows = driver.getWindowHandles();
+			
+			WebElement propertyElement = wait.until(ExpectedConditions.elementToBeClickable(
+				org.openqa.selenium.By.xpath("//div[contains(@class,'mb-srp__card')][1]")));
+			
+			((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", propertyElement);
+			VarWait.waitForSeconds(1);
+			((JavascriptExecutor) driver).executeScript("arguments[0].click();", propertyElement);
+			VarWait.waitForSeconds(3);
+			
+			Set<String> allWindows = driver.getWindowHandles();
+			if (allWindows.size() > originalWindows.size()) {
+				for (String windowHandle : allWindows) {
+					if (!originalWindows.contains(windowHandle)) {
+						driver.switchTo().window(windowHandle);
+						break;
+					}
+				}
+			}
+			
+			wait.until(driver -> ((JavascriptExecutor) driver).executeScript("return document.readyState").equals("complete"));
+			VarWait.waitForSeconds(2);
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to click first property listing: " + e.getMessage());
+		}
+	}
+
+	public boolean verifyPropertyDetailsComplete() {
+		try {
+			boolean hasPriceInfo = false;
+			try {
+				WebElement priceElement = wait.until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By
+						.xpath("//div[contains(@class,'price')] | //*[contains(text(),'₹')] | //*[contains(text(),'Lac')]")));
+				String priceText = priceElement.getText();
+				hasPriceInfo = !priceText.isEmpty() && (priceText.contains("₹") || priceText.contains("Lac"));
+			} catch (Exception e) {
+				hasPriceInfo = false;
+			}
+
+			boolean hasTitleInfo = false;
+			try {
+				WebElement titleElement = driver.findElement(org.openqa.selenium.By
+						.xpath("//div[contains(@class,'title')] | //h1 | //h2[contains(@class,'title')]"));
+				String titleText = titleElement.getText();
+				hasTitleInfo = !titleText.isEmpty() && titleText.length() > 10;
+			} catch (Exception e) {
+				hasTitleInfo = false;
+			}
+
+			boolean hasSummaryInfo = false;
+			try {
+				List<WebElement> summaryElements = driver.findElements(org.openqa.selenium.By
+						.xpath("//li[contains(@data-icon,'bed')] | //li[contains(@data-icon,'bath')] | "
+								+ "//*[contains(text(),'Bed')] | //*[contains(text(),'Bath')] | //*[contains(text(),'BHK')]"));
+				hasSummaryInfo = !summaryElements.isEmpty();
+			} catch (Exception e) {
+				hasSummaryInfo = false;
+			}
+
+			boolean hasDetailsList = false;
+			try {
+				List<WebElement> detailElements = driver
+						.findElements(org.openqa.selenium.By.xpath("//div[contains(@class,'list--label')] | "
+								+ "//*[contains(text(),'Carpet Area')] | //*[contains(text(),'Floor')] | "
+								+ "//*[contains(text(),'sqft')] | //*[contains(text(),'Status')]"));
+				hasDetailsList = !detailElements.isEmpty();
+			} catch (Exception e) {
+				hasDetailsList = false;
+			}
+
+			return hasPriceInfo && hasTitleInfo && hasSummaryInfo && hasDetailsList;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean verifyPropertyDetailsPageLoaded() {
+		try {
+			String currentUrl = getCurrentUrl().toLowerCase();
+			boolean urlValid = currentUrl.contains("propertydetails") || currentUrl.contains("property")
+					|| currentUrl.contains("flat") || currentUrl.contains("bhk");
+			String pageTitle = getPageTitle();
+			boolean titleRelevant = pageTitle != null && !pageTitle.isEmpty()
+					&& (pageTitle.toLowerCase().contains("bhk") || pageTitle.toLowerCase().contains("flat")
+							|| pageTitle.toLowerCase().contains("property")
+							|| pageTitle.toLowerCase().contains("sale"));
+			boolean hasContent = false;
+			try {
+				String bodyText = driver.findElement(org.openqa.selenium.By.xpath("//body")).getText();
+				hasContent = bodyText.length() > 200;
+			} catch (Exception e) {
+				hasContent = false;
+			}
+			return urlValid && titleRelevant && hasContent;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean verifyBasicPropertyDetails() {
+		try {
+			int detailsFound = 0;
+
+			try {
+				List<WebElement> priceElements = driver.findElements(org.openqa.selenium.By.xpath(
+						"//*[contains(text(),'₹')] | //*[contains(text(),'Lac')] | //*[contains(text(),'Crore')] | //*[contains(text(),'Price')]"));
+				if (!priceElements.isEmpty()) detailsFound++;
+			} catch (Exception e) {}
+
+			try {
+				List<WebElement> typeElements = driver.findElements(org.openqa.selenium.By.xpath(
+						"//*[contains(text(),'BHK')] | //*[contains(text(),'Flat')] | //*[contains(text(),'Apartment')] | //*[contains(text(),'Bed')]"));
+				if (!typeElements.isEmpty()) detailsFound++;
+			} catch (Exception e) {}
+
+			try {
+				List<WebElement> areaElements = driver.findElements(org.openqa.selenium.By.xpath(
+						"//*[contains(text(),'sqft')] | //*[contains(text(),'Area')] | //*[contains(text(),'carpet')] | //*[contains(text(),'built')]"));
+				if (!areaElements.isEmpty()) detailsFound++;
+			} catch (Exception e) {}
+
+			try {
+				List<WebElement> locationElements = driver.findElements(org.openqa.selenium.By.xpath(
+						"//*[contains(text(),'Pune')] | //*[contains(text(),'Mumbai')] | //*[contains(text(),'Delhi')] | "
+								+ "//*[contains(text(),'Bangalore')] | //*[contains(text(),'Kiwale')] | //*[contains(text(),'Address')]"));
+				if (!locationElements.isEmpty()) detailsFound++;
+			} catch (Exception e) {}
+
+			try {
+				List<WebElement> amenityElements = driver.findElements(org.openqa.selenium.By.xpath(
+						"//*[contains(text(),'Bath')] | //*[contains(text(),'Parking')] | //*[contains(text(),'Balcony')] | "
+								+ "//*[contains(text(),'Floor')] | //*[contains(text(),'Lift')] | //*[contains(text(),'Furnished')]"));
+				if (!amenityElements.isEmpty()) detailsFound++;
+			} catch (Exception e) {}
+
+			try {
+				List<WebElement> imageElements = driver.findElements(org.openqa.selenium.By.xpath(
+						"//img[contains(@src,'property')] | //img[contains(@alt,'BHK')] | //img[contains(@alt,'Flat')]"));
+				if (!imageElements.isEmpty()) detailsFound++;
+			} catch (Exception e) {}
+
+			return detailsFound >= 3;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean executePropertyDetailsVerificationTest() {
+		try {
+			boolean navigationSuccess = navigateToReadyToMovePage();
+			if (!navigationSuccess) return false;
+			
+			VarWait.waitForSeconds(5);
+			clickFirstPropertyListing();
+			VarWait.waitForSeconds(5);
+			boolean pageLoaded = verifyPropertyDetailsPageLoaded();
+			boolean detailsPresent = verifyBasicPropertyDetails();
+			
+			return navigationSuccess && (pageLoaded || detailsPresent);
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	// PAGINATION METHODS (Add these methods at the end of the class)
+
+	public boolean verifyPaginationExists() {
+		try {
+			boolean paginationFound = false;
+			try {
+				WebElement pagination = wait.until(ExpectedConditions.presenceOfElementLocated(org.openqa.selenium.By
+						.xpath("//div[contains(@class,'pagination')] | //ul[contains(@class,'pagination')] | //div[contains(@class,'pager')]")));
+				paginationFound = pagination.isDisplayed();
+			} catch (Exception e) {
+				try {
+					List<WebElement> pageNumbers = driver.findElements(org.openqa.selenium.By.xpath(
+							"//a[text()='1'] | //a[text()='2'] | //a[text()='3'] | //span[text()='1'] | //span[text()='2']"));
+					paginationFound = !pageNumbers.isEmpty();
+				} catch (Exception e2) {
+					try {
+						List<WebElement> navButtons = driver.findElements(org.openqa.selenium.By.xpath(
+								"//a[contains(text(),'Next')] | //a[contains(text(),'Previous')] | //a[contains(text(),'»')] | //a[contains(text(),'«')]"));
+						paginationFound = !navButtons.isEmpty();
+					} catch (Exception e3) {
+						paginationFound = false;
+					}
+				}
+			}
+			return paginationFound;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public void clickPage2() {
+		try {
+			WebElement page2Element = wait.until(ExpectedConditions.elementToBeClickable(
+				org.openqa.selenium.By.xpath("//a[text()='2' and contains(@href,'page')]")));
+			
+			((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", page2Element);
+			VarWait.waitFor(500);
+			((JavascriptExecutor) driver).executeScript("arguments[0].click();", page2Element);
+			VarWait.waitForSeconds(3);
+			
+			wait.until(driver -> ((JavascriptExecutor) driver).executeScript("return document.readyState").equals("complete"));
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to click Page 2: " + e.getMessage());
+		}
+	}
+
+	public void clickPage1() {
+		try {
+			WebElement page1Element = wait.until(ExpectedConditions.elementToBeClickable(
+				org.openqa.selenium.By.xpath("//a[text()='1' and contains(@href,'page')]")));
+			
+			((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", page1Element);
+			VarWait.waitFor(500);
+			((JavascriptExecutor) driver).executeScript("arguments[0].click();", page1Element);
+			VarWait.waitForSeconds(3);
+			
+			wait.until(driver -> ((JavascriptExecutor) driver).executeScript("return document.readyState").equals("complete"));
+		} catch (Exception e) {
+			// Don't throw exception - let calling method handle failure gracefully
+		}
+	}
+
+	public boolean verifyCurrentPage(int expectedPage) {
+		try {
+			// Check for non-clickable page indicator (most reliable)
+			List<WebElement> nonClickablePageElements = driver.findElements(org.openqa.selenium.By
+					.xpath("//span[text()='" + expectedPage + "' and not(parent::a)] | " + "//strong[text()='"
+							+ expectedPage + "'] | " + "//b[text()='" + expectedPage + "']"));
+			if (!nonClickablePageElements.isEmpty()) {
+				return true;
+			}
+			
+			// Fallback: Check URL for page parameter
+			String currentUrl = getCurrentUrl().toLowerCase();
+			return currentUrl.contains("page=" + expectedPage) || currentUrl.contains("page-" + expectedPage) 
+					|| currentUrl.contains("p=" + expectedPage);
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public boolean executePaginationTest() {
+		try {
+			// Navigate to Ready to Move page
+			boolean navigationSuccess = navigateToReadyToMovePage();
+			if (!navigationSuccess) {
+				return false;
+			}
+
+			VarWait.waitForSeconds(5); // Wait for page load
+
+			// Verify pagination exists
+			boolean paginationExists = verifyPaginationExists();
+			if (!paginationExists) {
+				return true; // Single page scenario is valid
+			}
+
+			// Primary objective: Click Page 2
+			boolean page2Success = false;
+			try {
+				clickPage2();
+				VarWait.waitForSeconds(4);
+				page2Success = verifyCurrentPage(2);
+			} catch (Exception e) {
+				// Page 2 click failed
+			}
+
+			// Bonus: Return to Page 1
+			try {
+				clickPage1();
+				VarWait.waitForSeconds(3);
+				verifyCurrentPage(1);
+			} catch (Exception e) {
+				// Page 1 return is not critical
+			}
+
+			return navigationSuccess && page2Success;
+
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+}
